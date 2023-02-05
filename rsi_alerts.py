@@ -52,6 +52,10 @@ def validate_list(list_obj,symbol,value):
         
 
 def send_message(message):
+    chat_id = "1575403134"
+    token = "5367862831:AAFP6Ef4E--8XCmL7h6pYEezPUPVD8SeGkU"
+    url =  "https://api.telegram.org/bot" + token
+
     if message:
         send_message = f"/sendMessage?chat_id={chat_id}&text={message}"
         base_url = url + send_message
@@ -101,8 +105,8 @@ def main():
     timeinterval = "3m"
     period=6 # Time period to calculate RSI binace has default 6
     sleep_duration = 60*5 # Seconds to sleep
-    down = 40 # lowest point from RSI to alert
-    up = 60 # highest point from RSI to alert
+    down = 25 # lowest point from RSI to alert
+    up = 75 # highest point from RSI to alert
     logging.info(f"""
     ==================================================
                 Start RSI alerts 
@@ -132,7 +136,7 @@ def main():
             mark_price = requests.get(f"https://fapi.binance.com/fapi/v1/premiumIndex?symbol={symbol}").json().get('markPrice','error in script :(')
 
             alert_message = f"""\
-ALERTA DE PRECIO PARA: { symbol }
+ALERTA DE PRECIO: { symbol }\n
 Precio: { mark_price }
 RSI 15m: { rsi_15m }
 RSI 1h: { rsi_1h }
@@ -150,6 +154,7 @@ Fecha: { datetime.now().strftime('%H:%M:%S %d-%m-%Y') }"""
             time.sleep(sleep_duration)
         except Exception as error:
             logging.error(f"Error on rsi code: { error }")
+            send_message(f"Error on server: \n{ error }")
             logging.info(": : sleep for 30 seconds and retry : :")
             time.sleep(30)
             continue
