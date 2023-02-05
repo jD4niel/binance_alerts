@@ -151,7 +151,7 @@ Fecha: { datetime.now().strftime('%H:%M:%S %d-%m-%Y') }"""
         except Exception as error:
             logging.error(f"Error on rsi code: { error }")
             logging.info(": : sleep for 30 seconds and retry : :")
-            sleep(30)
+            time.sleep(30)
             continue
 
 
