@@ -124,29 +124,35 @@ def main():
 
     while True:
 
-        rsi_15m = get_rsi(symbol=symbol,timeinterval="15m",period=period)
-        rsi_1h = get_rsi(symbol=symbol,timeinterval="1h",period=period)
-        rsi_4h = get_rsi(symbol=symbol,timeinterval="4h",period=period)
+        try:
+            rsi_15m = get_rsi(symbol=symbol,timeinterval="15m",period=period)
+            rsi_1h = get_rsi(symbol=symbol,timeinterval="1h",period=period)
+            rsi_4h = get_rsi(symbol=symbol,timeinterval="4h",period=period)
 
-        mark_price = requests.get(f"https://fapi.binance.com/fapi/v1/premiumIndex?symbol={symbol}").json().get('markPrice','error in script :(')
+            mark_price = requests.get(f"https://fapi.binance.com/fapi/v1/premiumIndex?symbol={symbol}").json().get('markPrice','error in script :(')
 
-        alert_message = f"""\
-    ALERTA DE PRECIO PARA: { symbol }
-    Precio: { mark_price }
-    RSI 15m: { rsi_15m }
-    RSI 1h: { rsi_1h }
-    RSI 4h: { rsi_4h }
-    Fecha: { datetime.now().strftime('%H:%M:%S %d-%m-%Y') }"""
-
-
-        if validate_list([rsi_15m,rsi_1h,rsi_4h],"<",down):
-            send_message(alert_message + "\n ==== LONG ====")
-
-        elif  validate_list([rsi_15m,rsi_1h,rsi_4h],">",up):
-            send_message(alert_message + "\n ==== SHORT ====")
+            alert_message = f"""\
+ALERTA DE PRECIO PARA: { symbol }
+Precio: { mark_price }
+RSI 15m: { rsi_15m }
+RSI 1h: { rsi_1h }
+RSI 4h: { rsi_4h }
+Fecha: { datetime.now().strftime('%H:%M:%S %d-%m-%Y') }"""
 
 
-        time.sleep(sleep_duration)
+            if validate_list([rsi_15m,rsi_1h,rsi_4h],"<",down):
+                send_message(alert_message + "\n ==== LONG ====")
+
+            elif  validate_list([rsi_15m,rsi_1h,rsi_4h],">",up):
+                send_message(alert_message + "\n ==== SHORT ====")
+
+
+            time.sleep(sleep_duration)
+        except Exception as error:
+            logging.error(f"Error on rsi code: { error }")
+            logging.info(": : sleep for 30 seconds and retry : :")
+            sleep(30)
+            continue
 
 
 
