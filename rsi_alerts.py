@@ -6,7 +6,7 @@ from pandas import pandas as pd
 import logging
 from pathlib import Path
 from dotenv import load_dotenv
-import os
+import os, sys
 
 logging.basicConfig(level=logging.INFO)
 env = load_dotenv(dotenv_path=Path('config.env'))
@@ -52,8 +52,6 @@ def validate_list(list_obj,symbol,value):
         
 
 def send_message(message):
-    chat_id = "1575403134"
-    token = "5367862831:AAFP6Ef4E--8XCmL7h6pYEezPUPVD8SeGkU"
     url =  "https://api.telegram.org/bot" + token
 
     if message:
@@ -97,16 +95,64 @@ def get_rsi(symbol="BTCBUSD",timeinterval="4h",period=4,**args):
     logging.info(f": {now} : { symbol } - { '{:.2f}'.format(df2['close'].iloc[-1])} - RSI: { '{:.10f}'.format(rsi) } - { timeinterval }")
     return float(rsi)
 
+def format_args(arguments):
+    if '--h' in arguments:
+        print("""\
+--------------------------------------------------------------------------------------
+
+                            RSI ALERTS FROM BINANCE
+
+                ARGUMENTS (by default):
+                    symbol = "BTC" + "BUSD"
+                    timeinterval = "3m"
+                    down = 25 # lowest point from RSI to alert
+                    up = 75 # highest point from RSI to alert
+                    sleep_duration = 60*5 # Seconds to sleep
+                    period = 6 # Time period to calculate RSI binace has default 6
+
+                EXAMPLE:
+
+                python rsi_alerts.py "ETHBUSD" "3m" 25 75 300 6
+
+                -- note: you can use a only one argument
+
+                python rsi_alerts.py "DOT" --> trade DOTBUSD with all default vals
+
+--------------------------------------------------------------------------------------""")
+        sys.exit()
+ 
+    symbol = "BTC" + "BUSD"
+    timeinterval = "3m"
+    down = 25 # lowest point from RSI to alert
+    up = 75 # highest point from RSI to alert
+    sleep_duration = 60*5 # Seconds to sleep
+    period = 6 # Time period to calculate RSI binace has default 6
+
+    values = [symbol, timeinterval, down, up, sleep_duration, period]
+    
+    # Format arguments values 
+    arguments.pop(0)
+    for num,value in enumerate(arguments):
+        if num == 0:
+            value = value.upper()
+            if "BUSD" not in value:
+                value = value + "BUSD"
+
+        values[num] = value
+
+    symbol = values[0]
+    timeinterval = values[1]
+    down = values[2]
+    up = values[3]
+    sleep_duration = values[4]
+    period = values[5]
+
+    return symbol, timeinterval, down, up, sleep_duration, period
 
 
 def main():
-    one_hour = 60*60
-    symbol= "DOT" + "BUSD"
-    timeinterval = "3m"
-    period=6 # Time period to calculate RSI binace has default 6
-    sleep_duration = 60*5 # Seconds to sleep
-    down = 25 # lowest point from RSI to alert
-    up = 75 # highest point from RSI to alert
+    symbol, timeinterval, down, up, sleep_duration, period = format_args(sys.argv)
+    
     logging.info(f"""
     ==================================================
                 Start RSI alerts 
@@ -114,6 +160,10 @@ def main():
         symbol: {symbol} - currency
         period: { period } - periods to calculate rsi
         timeinterval {timeinterval} - 1m,5m,15m,1h,2h4h
+        down : { down } # lowest point from RSI to alert
+        up : { down } # highest point from RSI to alert
+        sleep_duration : { sleep_duration } # Seconds to sleep
+        period: { period }
 
     ===================================================
 
