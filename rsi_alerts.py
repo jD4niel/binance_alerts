@@ -7,6 +7,7 @@ import logging
 from pathlib import Path
 from dotenv import load_dotenv
 import os, sys
+import numpy as np
 
 logging.basicConfig(level=logging.INFO)
 env = load_dotenv(dotenv_path=Path('config.env'))
@@ -23,32 +24,20 @@ if not(chat_id or token):
     sys.exit()
 
 
-def validate_list(list_obj,symbol,value):
-    ##############################################################
-    #  
-    # list obj: [1,2,10]
-    # symbol: > could be (<, >,=,<=,>=)
-    # value: 10
-    # Evauluates each of element of list according to symbol
-    # 1 > 10, 2 > 10, 10 > 10
-    # and returns True of False if is True
-    #
-    ############################################################## 
-    vals = []
+def get_data(symbol="BTCBUSD",timeinterval="4h",limit=50):
+    url = 'https://fapi.binance.com/fapi/v1/klines?symbol='+symbol+'&interval='+timeinterval+'&limit='+str(limit)
+    data = requests.get(url).json()
+    return data
 
-    for l in list_obj:
-        if symbol == "<":
-            vals.append(l < value)
-        elif symbol == "<=":
-            vals.append(l <= value)
-        elif symbol == ">":
-            vals.append(l > value)
-        elif symbol == ">=":
-            vals.append(l >= value)
-        elif symbol == "==":
-            vals.append(l == value)
-
-    return all(vals)
+def get_bollinger_bands(data, period=20, std_dev_factor=2):
+    # FOR DEFAULT PERIOD = 21, STD_DEV_FACTOR = 2
+    closing_prices = [float(entry[4]) for entry in data]
+    rolling_mean = np.mean(closing_prices[-period:])
+    rolling_std = np.std(closing_prices[-period:])
+    upper_band = rolling_mean + std_dev_factor * rolling_std
+    middle_band = rolling_mean
+    lower_band = rolling_mean - std_dev_factor * rolling_std
+    return upper_band, middle_band, lower_band
         
 
 def send_message(message):
@@ -91,8 +80,7 @@ def get_rsi(symbol="BTCBUSD",timeinterval="4h",period=4,**args):
     
     rsi=100 - (100 / (1 + RS))
     rsi=rsi['close'].iloc[-1]
-    now = datetime.now().strftime("%H:%M:%S")
-    logging.info(f": {now} : { symbol } - { '{:.2f}'.format(df2['close'].iloc[-1])} - RSI: { '{:.10f}'.format(rsi) } - { timeinterval }")
+   
     return float(rsi)
 
 def format_args(arguments):
@@ -122,10 +110,10 @@ def format_args(arguments):
         sys.exit()
  
     symbol = "BTC" + "BUSD"
-    timeinterval = "3m"
-    down = 25 # lowest point from RSI to alert
-    up = 75 # highest point from RSI to alert
-    sleep_duration = 60*5 # Seconds to sleep
+    timeinterval = "4h"
+    down = 30 # lowest point from RSI to alert
+    up = 70 # highest point from RSI to alert
+    sleep_duration = 60*2 # Seconds to sleep
     period = 6 # Time period to calculate RSI binace has default 6
 
     values = [symbol, timeinterval, down, up, sleep_duration, period]
@@ -152,52 +140,59 @@ def format_args(arguments):
 
 def main():
     symbol, timeinterval, down, up, sleep_duration, period = format_args(sys.argv)
+    BOLL_PERIOD = 5
+    BOLL_STD_DEV_FACTOR = 2.1
+
     
     logging.info(f"""
     ==================================================
-                Start RSI alerts 
+                Start RSI/BOLL alerts 
 
         symbol: {symbol} - currency
         period: { period } - periods to calculate rsi
-        timeinterval {timeinterval} - 1m,5m,15m,1h,2h4h
+        timeinterval {timeinterval} - 1m,5m,15m,12h,2h,4h
         down : { down } # lowest point from RSI to alert
-        up : { down } # highest point from RSI to alert
+        up : { up } # highest point from RSI to alert
         sleep_duration : { sleep_duration } # Seconds to sleep
         period: { period }
+        BOLL_PERIOD: { BOLL_PERIOD }
+        BOLL_STD_DEV_FACTOR: { BOLL_STD_DEV_FACTOR }
 
     ===================================================
 
     """)
 
-    #    RULES FOR ALERTS ACCORDING AMOUNT OF TIME
-    #
-    #    15m, 1h and 4h- values up= 70 down= 25
-    #
-    #    RUNS EVERY 15 MINUTES 
-
 
     while True:
 
         try:
-            rsi_15m = get_rsi(symbol=symbol,timeinterval="15m",period=period)
-            rsi_1h = get_rsi(symbol=symbol,timeinterval="1h",period=period)
-            rsi_4h = get_rsi(symbol=symbol,timeinterval="4h",period=period)
+            data = get_data(symbol=symbol, timeinterval=timeinterval,limit=27)
+            upper_band, middle_band, lower_band = get_bollinger_bands(data, period=BOLL_PERIOD, std_dev_factor=BOLL_STD_DEV_FACTOR)
+            upper_band =  '{:.2f}'.format(float(upper_band))
+            middle_band =  '{:.2f}'.format(float(middle_band))
+            lower_band =  '{:.2f}'.format(float(lower_band))
 
-            mark_price = requests.get(f"https://fapi.binance.com/fapi/v1/premiumIndex?symbol={symbol}").json().get('markPrice','error in script :(')
+            rsi = get_rsi(symbol=symbol,timeinterval=timeinterval,period=period)
+
+            mark_price = '{:.2f}'.format(float(requests.get(f"https://fapi.binance.com/fapi/v1/premiumIndex?symbol={symbol}").json().get('markPrice','error in script :(')))
+
 
             alert_message = f"""\
 ALERTA DE PRECIO: { symbol }\n
 Precio: { mark_price }
-RSI 15m: { rsi_15m }
-RSI 1h: { rsi_1h }
-RSI 4h: { rsi_4h }
+RSI {timeinterval}: { rsi }
+upper: { upper_band }
+middle: { middle_band }
+lower: { lower_band }
 Fecha: { datetime.now().strftime('%H:%M:%S %d-%m-%Y') }"""
 
+            now = datetime.now().strftime("%H:%M:%S")
+            logging.info(f": {now} : { symbol } - { mark_price } - RSI: { '{:.2f}'.format(rsi) } - { timeinterval } | {upper_band} | {middle_band} | {lower_band} |")
 
-            if validate_list([rsi_15m,rsi_1h,rsi_4h],"<",down):
+            if rsi < down and mark_price >= upper_band:
                 send_message(alert_message + "\n ==== LONG ====")
 
-            elif  validate_list([rsi_15m,rsi_1h,rsi_4h],">",up):
+            elif rsi > up and mark_price <= lower_band:
                 send_message(alert_message + "\n ==== SHORT ====")
 
 
