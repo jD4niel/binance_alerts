@@ -24,7 +24,7 @@ if not(chat_id or token):
     sys.exit()
 
 
-def get_data(symbol="BTCBUSD",timeinterval="4h",limit=50):
+def get_data(symbol="BTCUSDT",timeinterval="4h",limit=50):
     url = 'https://fapi.binance.com/fapi/v1/klines?symbol='+symbol+'&interval='+timeinterval+'&limit='+str(limit)
     data = requests.get(url).json()
     return data
@@ -49,7 +49,7 @@ def send_message(message):
         return requests.get(base_url)
 
 
-def get_rsi(symbol="BTCBUSD",timeinterval="4h",period=4,**args):
+def get_rsi(symbol="BTCUSDT",timeinterval="4h",period=4,**args):
     now = datetime.utcnow()
     unixtime = calendar.timegm(now.utctimetuple())
     since = unixtime
@@ -91,7 +91,7 @@ def format_args(arguments):
                             RSI ALERTS FROM BINANCE
 
                 ARGUMENTS (by default):
-                    symbol = "BTC" + "BUSD"
+                    symbol = "BTC" + "USDT"
                     timeinterval = "3m"
                     down = 25 # lowest point from RSI to alert
                     up = 75 # highest point from RSI to alert
@@ -100,16 +100,16 @@ def format_args(arguments):
 
                 EXAMPLE:
 
-                python rsi_alerts.py "ETHBUSD" "3m" 25 75 300 6
+                python rsi_alerts.py "ETHUSDT" "3m" 25 75 300 6
 
                 -- note: you can use a only one argument
 
-                python rsi_alerts.py "DOT" --> trade DOTBUSD with all default vals
+                
 
 --------------------------------------------------------------------------------------""")
         sys.exit()
  
-    symbol = "BTC" + "BUSD"
+    symbol = "BTC" + "USDT"
     timeinterval = "4h"
     down = 30 # lowest point from RSI to alert
     up = 70 # highest point from RSI to alert
@@ -123,8 +123,8 @@ def format_args(arguments):
     for num,value in enumerate(arguments):
         if num == 0:
             value = value.upper()
-            if "BUSD" not in value:
-                value = value + "BUSD"
+            if "USDT" not in value:
+                value = value + "USDT"
 
         values[num] = value
 
